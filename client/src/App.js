@@ -12,7 +12,7 @@ function App() {
 
   const handleDrop = (e) => {
     e.preventDefault();
-    setFiles([...files, ...e.dataTranser.files]);
+    setFiles([...files, ...e.dataTransfer.files]);
   };
 
   const uploadCurrentChunk = () => {
@@ -29,7 +29,7 @@ function App() {
   };
 
   const uploadChunk = (readerEvent) => {
-    const file = files(currentIndex);
+    const file = files[currentIndex];
     const data = readerEvent.target.result;
     const params = new URLSearchParams();
     const headers = { "Content-Type": "application/octet-stream" };
@@ -37,8 +37,20 @@ function App() {
     params.set("size", file.size);
     params.set("currentChunkIndex", currentChunk);
     params.set("totalChunks", Math.ceil(file.size / chunkSize));
-    Axios.post(`https://localhost:4000/upload?${params.toString()}`, data, {
+    Axios.post(`http://localhost:4000/upload?${params.toString()}`, data, {
       headers,
+    }).then((response) => {
+      const fileSize = files[currentIndex].size;
+      const chunks = Math.ceil(fileSize / chunkSize) - 1;
+      const isLastChunk = currentChunk === chunks;
+
+      if (isLastChunk) {
+        file.finalFilename = response.data.finalFilename;
+        setLastFile(currentIndex);
+        setCurrentChunk(null);
+      } else {
+        setCurrentChunk(currentChunk + 1);
+      }
     });
   };
 
@@ -60,20 +72,62 @@ function App() {
     }
   }, [currentChunk]);
 
+  useEffect(() => {
+    if (lastFile === null) {
+      return;
+    }
+    const isLastFile = lastFile === files.length - 1;
+    const nextFileIndex = isLastFile ? null : currentIndex + 1;
+    setCurrentIndex(nextFileIndex);
+  }, [lastFile]);
+
   return (
-    <div
-      className={active ? "dropzone active" : "dropzone"}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setActive(true);
-      }}
-      onDragLeave={(e) => {
-        e.preventDefault();
-        setActive(false);
-      }}
-      onDrop={handleDrop}
-    >
-      Drop Files Here
+    <div>
+      <div
+        className={active ? "dropzone active" : "dropzone"}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setActive(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          setActive(false);
+        }}
+        onDrop={handleDrop}
+      >
+        Drop Files Here
+      </div>
+      <div className="files">
+        {files.map((file, fileIndex) => {
+          let progress = 0;
+          if (file.finalFilename) {
+            progress = 100;
+          } else {
+            const uploading = fileIndex === currentIndex;
+            const chunks = Math.ceil(file.size / chunkSize);
+            if (uploading) {
+              progress = Math.round((currentIndex / chunks) * 100);
+            } else {
+              progress = 0;
+            }
+          }
+          return (
+            <a
+              className="file"
+              target="_blank"
+              href={"http://localhost:4000/uploads/" + file.finalFilename}
+            >
+              <div className="name">{file.name}</div>
+              <div
+                className={"progress " + (progress === 100 ? "done" : "")}
+                style={{ width: progress + "%" }}
+              >
+                {progress}%
+              </div>
+            </a>
+          );
+        })}
+      </div>
     </div>
   );
 }

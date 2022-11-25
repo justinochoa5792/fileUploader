@@ -16,3 +16,26 @@ body {
 .dropzone.active {
   border-color: #fff;
 }
+
+.file {
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.8);
+  display: block;
+  background-color: #41415d;
+  border-radius: 10px;
+  margin-top: 20px;
+  padding: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.file .progress {
+  background-color: rgba(80, 80, 120, 0.8);
+  position: absolute;
+  inset: 0;
+  width: 0;
+  padding-top: 10px;
+  text-align: center;
+}
+.file .progress.done {
+  top: 100px;
+}
